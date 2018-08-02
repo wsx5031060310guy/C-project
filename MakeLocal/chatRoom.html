@@ -1,0 +1,144 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Chat room</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet" />
+    <link href="css/bootstrap-theme.css" rel="stylesheet" />
+
+        <script src="Scripts/jquery-1.12.4.js"></script>
+    <!--Reference the SignalR library. -->
+    <script src="Scripts/jquery.signalR-2.2.1.min.js"></script>
+    <script src="Scripts/bootstrap.min.js"></script>
+    <!--這邊滿重要的，這個參考是動態產生的，當我們 build 之後才會動態建立這個資料夾，且需引用在 jQuery 和 signalR 之後-->
+    <script src="/signalr/hubs"></script>
+</head>
+<body>
+    <!--http://msdn.microsoft.com/zh-tw/library/dn535725.aspx-->
+    <div class="row">
+        <div class="col-sm-2">
+            <div class="panel panel-info">
+                <div class="panel-heading">メッセージ一覧</div>
+                <div class="panel-body">
+                    <div id="chatList">
+
+                        <p> Who is online </p>
+
+                        <ul id="list"></ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="col-sm-10">
+            <div class="panel panel-primary">
+                <div class="panel-heading">Chating Content <span id="userName" class="glyphicon glyphicon-user pull-right"> Hi ！ </span></div>
+                <div id="messageBox" class="panel-body">
+                    <ul id="messageList"></ul>
+                </div>
+            </div>
+            <div id="bar">
+                <div class="col-sm-4">
+                    <select id="box" class="form-control">
+                        <option value="all"> All Person </option>
+                    </select>
+                </div>
+                <div class="col-sm-4">
+                    <input type="text" id="message" class="form-control" />
+                </div>
+                <div class="col-sm-4">
+                    <input type="button" id="send" value=" Send " />
+                </div>
+
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        var userID = "";
+        $(function () {
+            while (userID.length == 0) {
+                userID = window.prompt("Please set up username");
+                if (!userID)
+                    userID = "";
+            }
+            $("#userName").append(userID).show();
+
+            //建立與Server端的Hub的物件，注意Hub的開頭字母一定要為小寫
+            var chat = $.connection.codingChatRoomHub;
+            //取得所有上線清單
+            chat.client.getList = function (userList) {
+                var li = "";
+                $.each(userList, function (i, data) {
+                    li += "<li id='" + data.id + "'><a href='#'><span class='glyphicon glyphicon-user'> " + data.name + "</span></a></li>";
+                })
+                $("#list").html(li);
+                registerListClick();
+            }
+            //新增一筆上線人員
+            chat.client.addList = function (id, name) {
+                var li = "<li id='" + id + "'><a href='#'><span class='glyphicon glyphicon-user'> " + name + "</span></a></li>";
+                $("#list").append(li);
+                registerListClick();
+            }
+
+            //移除一筆上線人員
+            chat.client.removeList = function (id) {
+                $("#" + id).remove();
+            }
+
+            //全體聊天
+            chat.client.sendAllMessage = function (message) {
+                $("#messageList").append("<li>" + message + "</li>");
+            }
+
+            //密語聊天
+            chat.client.sendMessage = function (message) {
+                $("#messageList").append("<li>" + message + "</li>");
+            }
+
+            chat.client.hello = function (message) {
+                $("#messageList").append("<li>" + message + "</li>");
+            }
+
+            //將連線打開
+            $.connection.hub.start().done(function () {
+                //當連線完成後，呼叫Server端的userConnected方法，並傳送使用者姓名給Server
+                chat.server.userConnected(userID);
+            });;
+
+            $("#send").click(function () {
+                var to = $("#box").val();
+                //當to為all代表全體聊天，否則為私密聊天
+                if (to == "all")
+                    chat.server.sendAllMessage($("#message").val());
+                else
+                    chat.server.sendMessage(to, $("#message").val());
+                $("#message").val("");
+            });
+        })
+
+        function registerListClick() {
+            $("#list li").unbind("click");
+            $("#list li").on("click", function () {
+                var $this = $(this);
+                var id = $this.attr("id");
+                var text = $this.text();
+
+                //防止重複加入密語清單
+                if ($("#box").has("." + id).length > 0) {
+                    $("#box").find("[class=" + id + "]").attr({ "selected": "selected" });
+                }
+                else {
+                    var option = "<option></option>"
+                    $("#box").append(option).find("option:last").val(id).text(text).attr({ "selected": "selected" }).addClass(id);
+                }
+
+            });
+        }
+    </script>
+</body>
+
+</html>
+
