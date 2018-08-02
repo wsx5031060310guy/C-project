@@ -1,0 +1,182 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>SignalR Simple Chat</title>
+    <style type="text/css">
+
+        body
+        {
+            font-family:游ゴシック体, 'Yu Gothic', YuGothic, 'ヒラギノ角ゴシック Pro', 'Hiragino Kaku Gothic Pro', メイリオ, Meiryo, Osaka, 'ＭＳ Ｐゴシック', 'MS PGothic', sans-serif;background-color:#E9EBEE;
+        }
+        .container {
+            background-color: #99CCFF;
+            border: thick solid #808080;
+            padding: 20px;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        Name：<input id="name"><br />
+        Content：<input id="content"><br />
+        <button id="btn">Send message</button>
+        <ul id="discussion">
+        </ul>
+    </div>
+    <!-- jQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+    <!-- Firechat -->
+    <link rel="stylesheet" href="https://cdn.firebase.com/libs/firechat/3.0.1/firechat.min.css" />
+    <script src="https://cdn.firebase.com/libs/firechat/3.0.1/firechat.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/4.8.0/firebase.js"></script>
+    <script>
+        // Initialize Firebase
+        var firebase;
+        $(function(){
+            var $name = $('#name'),
+                $content = $('#content'),
+                $btn = $('#btn'),
+                    $show = $('#discussion');
+            var d = new Date();
+
+            var month = d.getMonth() + 1;
+            var day = d.getDate();
+            var hour=d.getHours();
+            var min=d.getMinutes();
+            var sec=d.getSeconds();
+            var mill=d.getMilliseconds();
+
+            var output = d.getFullYear() + '/' +
+               (('' + month).length < 2 ? '0' : '') + month + '/' +
+               (('' + day).length < 2 ? '0' : '') + day + ' ' +
+               (('' + hour).length < 2 ? '0' : '') + hour + ':' +
+               (('' + min).length < 2 ? '0' : '') + min + ':' +
+               (('' + sec).length < 2 ? '0' : '') + sec + '.' +
+               (('' + mill).length < 3 ? '0' : '') + (('' + mill).length < 2 ? '0' : '') + mill;
+
+            var ms = d.getFullYear() +
+               (('' + month).length < 2 ? '0' : '') + month +
+               (('' + day).length < 2 ? '0' : '') + day +
+               (('' + hour).length < 2 ? '0' : '') + hour +
+               (('' + min).length < 2 ? '0' : '') + min +
+               (('' + sec).length < 2 ? '0' : '') + sec +
+               (('' + mill).length < 3 ? '0' : '') + (('' + mill).length < 2 ? '0' : '') + mill;
+
+        var config = {
+            databaseURL: "url"
+        };
+        firebase.initializeApp(config);
+
+        var database = firebase.database().ref();
+            //第一次載入資料庫時顯示所有內容
+        database.once('value', function (snapshot) {
+            $show.html('');
+            for (var i in snapshot.val()) {
+                //$show.prepend('<div><div>' + snapshot.val()[i].time + '</div>' + snapshot.val()[i].name + ' said：' + snapshot.val()[i].content + '</div>');
+                $show.prepend('<div class="' + snapshot.val()[i].id + '"><div>' + snapshot.val()[i].year + '年' + snapshot.val()[i].month
+                    + '月' + snapshot.val()[i].day + '日 ' + snapshot.val()[i].hour + '時' + snapshot.val()[i].minute + '分' + snapshot.val()[i].second + '秒前</div>' + snapshot.val()[i].name + ' said to ' + snapshot.val()[i].name2 + '：' + snapshot.val()[i].content + '</div>');
+            }
+        });
+
+
+            //每一次資料庫有變動時，獲取最新一筆內容呈現
+        database.limitToLast(1).on('value', function (snapshot) {
+            for (var i in snapshot.val()) {
+                //$show.prepend('<div class="' + snapshot.val()[i].id + '"><div>' + snapshot.val()[i].time + '</div>' + snapshot.val()[i].name + ' said：' + snapshot.val()[i].content + '</div>');
+                $show.prepend('<div class="' + snapshot.val()[i].id + '"><div>' + snapshot.val()[i].year + '年' + snapshot.val()[i].month
+    + '月' + snapshot.val()[i].day + '日 ' + snapshot.val()[i].hour + '時' + snapshot.val()[i].minute + '分' + snapshot.val()[i].second + '秒前</div>' + snapshot.val()[i].name + ' said to ' + snapshot.val()[i].name2 + '：' + snapshot.val()[i].content + '</div>');
+            }
+            //如果是自己發出去的文字，就改變顏色
+            $show.find('.id' + ms).css({
+                color: '#f00'
+            });
+            $show.find('.id' + ms + ' div').css({
+                color: '#f00'
+            });
+        });
+        $btn.on('click', write);
+            //設定在對話框按下 enter 的事件 ( enter 預設 keyCode 為 13 )
+        $content.on('keydown', function (e) {
+            if (e.keyCode == 13) {
+                write();
+            }
+        });
+
+        function write() {
+            var date = new Date();
+
+            var month = d.getMonth() + 1;
+            var day = d.getDate();
+            var hour = d.getHours();
+            var min = d.getMinutes();
+            var sec = d.getSeconds();
+            var mill = d.getMilliseconds();
+
+            var output = date.getFullYear() + '-' +
+               (('' + month).length < 2 ? '0' : '') + month + '-' +
+               (('' + day).length < 2 ? '0' : '') + day + ' ' +
+               (('' + hour).length < 2 ? '0' : '') + hour + ':' +
+               (('' + min).length < 2 ? '0' : '') + min + ':' +
+               (('' + sec).length < 2 ? '0' : '') + sec + '.' +
+               (('' + mill).length < 3 ? '0' : '') + (('' + mill).length < 2 ? '0' : '') + mill;
+            //記得一開始要先宣告 ms = new Date().getTime()
+            var postData = {
+                name: $('#name').val(),
+                name2: 'Macro',
+                content: $('#content').val(),
+                time: output,
+                id: 'id' + ms,
+                year: date.getFullYear(),
+                month: month,
+                day: day,
+                hour: hour,
+                minute: min,
+                second: sec,
+                filename: '',
+                uid: '1',
+                to_uid:'2'
+            };
+            database.push(postData);
+
+            $.ajax({
+                type: "POST",
+                url: "chatroom.aspx/toget_friend_list",
+                data: "{param1: 'id" + ms + "',param2: '1',param3: '2',param4: '" + $('#content').val() + "',param5: '" + date.getFullYear() + "',param6: '" + month + "',param7: '" + day + "',param8: '" + hour + "',param9: '" + min + "',param10: '" + sec + "',param11: '" + filename + "'}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                async: true,
+                cache: false,
+                success: function (result) {
+                    //Successfully gone to the server and returned with the string result of the server side function do what you want with the result
+                    //console.log(result.d);
+                    $('#dlg-body_tofriend_list').empty();
+                    $('#dlg-body_tofriend_list').append(result.d);
+                    //console.log(result.d);
+
+                    var dlg = document.getElementById("dlgbox_tofriend_list");
+                    dlg.style.display = "block";
+
+                    var winWidth = window.innerWidth;
+                    var winHeight = window.innerHeight;
+
+                    dlg.style.left = 0 + "px";
+                    dlg.style.top = winHeight / 10 + "px";
+
+                    var dlg1 = document.getElementById("dlgbox_firend");
+                    dlg1.style.display = "none";
+                },
+                error: function (result) {
+                    //console.log(result.Message);
+                    //alert(result.d);
+                }
+            });
+            $content.val('');
+        }
+
+        });
+    </script>
+</body>
+</html>
